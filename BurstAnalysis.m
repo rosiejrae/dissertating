@@ -1,0 +1,171 @@
+clear
+clc
+close all
+
+% Open an xls file
+% This will bring up the file-open dialog
+xlsFile = 'D:\PlexonData\WT Fischers\230910\.8,3.601,8.177 sorted.xls';
+
+format longG % giving the actual values
+
+% Load your data from the Excel file (assuming 'num' is the data matrix)
+num = xlsread(xlsFile); % Uncomment this line if 'num' is not defined
+
+% Extract variables from the data
+Channel = num(:, 1); % extract the first column of numerical data
+Unit = num(:, 2); % extract the second column of numerical data
+Timestamp = num(:, 3);
+Energy = num(:, 4);
+Peak = num(:, 5);
+Area = num(:, 6);
+
+% Find the unique values of the unit column
+uniqueUnits = unique(Unit);
+
+% Print out the total number of unique units
+fprintf('Total number of unique units: %d\n', length(uniqueUnits));
+
+%~~~~~~~~~~Extact data before clonidine injection~~~~~~~~~~~~~~~~~~%
+
+% Loop through the unique units and extract the corresponding data
+for i = 1:length(uniqueUnits)
+    % Find the rows corresponding to the current unit
+    unitRows = Unit == uniqueUnits(i);
+
+    % Extract the data for the current unit
+    unitChannel = Channel(unitRows);
+    unitTimestamp = Timestamp(unitRows);
+    unitEnergy = Energy(unitRows);
+    unitPeak = Peak(unitRows);
+    unitArea = Area(unitRows);
+
+% Set the timestamp cutoff, time when clonidine was injected
+
+
+    timestampCutoff = 3*60; %put in minutes and multiply by 60 bc TS in seconds
+
+    % Filter data based on timestamp
+    validTimestamps = unitTimestamp <= timestampCutoff;
+    unitChannel = unitChannel(validTimestamps);
+    unitTimestamp = unitTimestamp(validTimestamps);
+    unitEnergy = unitEnergy(validTimestamps);
+    unitPeak = unitPeak(validTimestamps);
+    unitArea = unitArea(validTimestamps);
+
+    % Calculate the average values for the current unit
+    avgEnergy = mean(unitEnergy);
+    avgPeak = mean(unitPeak);
+    avgArea = mean(unitArea);
+
+    % Print out the unit number and its corresponding average values
+    fprintf('Unit %d:\n', uniqueUnits(i));
+    fprintf('Average Energy: %f\n', avgEnergy);
+    fprintf('Average Peak: %f\n', avgPeak);
+    fprintf('Average Area: %f\n', avgArea);
+    
+end
+%~~~~~~~~~~~Bust Analysis in valid time window~~~~~~~~~~~~~~~~~~~~~~~~%
+
+% Initialize an array to store the average number of spikes per burst per unit
+avgSpikesPerBurst = zeros(length(uniqueUnits), 1);
+
+% Initialize an array to store the average burst duration per unit
+avgBurstDuration = zeros(length(uniqueUnits), 1);
+
+% Initialize arrays to store average burst firing rate and average burst ISI per unit
+avgBurstFiringRate = zeros(length(uniqueUnits), 1);
+avgBurstISI = zeros(length(uniqueUnits), 1);
+
+% Loop through the unique units and extract burst-related information
+for i = 1:length(uniqueUnits)
+    unitRows = Unit == uniqueUnits(i);
+    validunitTimestamp = Timestamp(unitRows);
+    
+    % Set burst detection criteria (e.g., ISI threshold)
+    isiMin = 0; % Minimum ISI
+    isiMax = 0.16; % Maximum ISI
+    
+    % Find bursts (based on ISI criteria)
+    isi = diff(validunitTimestamp);
+    burst_starts = [];
+    burst_ends = [];
+    burst_count = 0;
+    
+    for j = 1:length(isi)-1
+        if isi(j) >= isiMin && isi(j) <= isiMax
+            burst_count = burst_count + 1;
+        else
+            if burst_count > 1
+                burst_starts(end+1) = j - burst_count + 1;
+                burst_ends(end+1) = j;
+            end
+            burst_count = 0;
+        end
+    end
+    
+    % Handle the last burst if it extends to the end of the data
+    if burst_count > 1
+        burst_starts(end+1) = length(isi) - burst_count + 1;
+        burst_ends(end+1) = length(isi);
+    end
+    
+     % Calculate the burst durations for the current unit
+    burstDurations = validunitTimestamp(burst_ends) - validunitTimestamp(burst_starts);
+
+    % Calculate the total number of spikes for the current unit
+    totalSpikes = length(validunitTimestamp);
+
+        % Calculate the total burst duration for the current unit
+    totalBurstDuration = sum(burstDurations);
+
+     % Calculate the average burst firing rate (spikes per second) for the current unit
+    if totalBurstDuration > 0
+        avgBurstFiringRate(i) = totalSpikes / totalBurstDuration;
+    else
+        avgBurstFiringRate(i) = 0; % Avoid division by zero
+    end
+   
+% Calculate the average burst ISI for the current unit
+    allBurstISIs = [];
+    for k = 1:length(burst_starts)
+        burstISIs = diff(validunitTimestamp(burst_starts(k):burst_ends(k)+1));
+        allBurstISIs = [allBurstISIs; burstISIs];
+    end
+    
+    if ~isempty(allBurstISIs)
+        avgBurstISI(i) = mean(allBurstISIs);
+    else
+        avgBurstISI(i) = 0; % No bursts or only one burst
+    end
+
+    % Print the average burst firing rate and average burst ISI for the current unit
+    fprintf('Unit %d: Average Burst Firing Rate = %.4f Hz\n', uniqueUnits(i), avgBurstFiringRate(i));
+    fprintf('Unit %d: Average Burst ISI = %.4f seconds\n', uniqueUnits(i), avgBurstISI(i));
+    
+    % Calculate the average burst duration for the current unit
+    if ~isempty(burstDurations)
+        avgBurstDuration(i) = mean(burstDurations);
+    else
+        avgBurstDuration(i) = 0; % Avoid division by zero
+    end
+    
+    % Print the average burst duration for the current unit
+    fprintf('Unit %d: Average Burst Duration = %.4f seconds\n', uniqueUnits(i), avgBurstDuration(i))
+
+    % Calculate the number of bursts for the current unit
+    numBursts = length(burst_starts);
+    
+    % Calculate the total number of spikes for the current unit
+    totalSpikes = length(validunitTimestamp);
+    
+    % Calculate the average number of spikes per burst for the current unit
+    if numBursts > 0
+        avgSpikesPerBurst(i) = totalSpikes / numBursts;
+    else
+        avgSpikesPerBurst(i) = 0; % Avoid division by zero
+    end
+    
+    % Print the average number of spikes per burst for the current unit
+    fprintf('Unit %d: Average Spikes Per Burst = %.4f\n', uniqueUnits(i), avgSpikesPerBurst(i));
+end
+
