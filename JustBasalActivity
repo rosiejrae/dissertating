@@ -1,0 +1,163 @@
+clear
+clc
+close all
+
+% Open an xls file
+% This will bring up the file-open dialog
+xlsFile = 'D:\PlexonData\1802538 sorted.xls';
+
+format longG % giving the actual values
+
+% Load your data from the Excel file (assuming 'num' is the data matrix)
+num = xlsread(xlsFile); % Uncomment this line if 'num' is not defined
+
+% Extract variables from the data
+Channel = num(:, 1);
+Unit = num(:, 2);
+Timestamp = num(:, 3);
+Energy = num(:, 4);
+Area = num(:, 5);
+ISIprevious = num(:, 6);
+ISInext = num(:, 7);
+PeakFWHM = num(:, 8);
+ValleyFWHM = num(:, 9);
+PeakValley = num(:, 10);
+
+% Find the unique values of the unit column
+uniqueUnits = unique(Unit);
+
+% Print out the total number of unique units
+fprintf('Total number of unique units: %d\n', length(uniqueUnits));
+
+% Define time intervals
+basalInterval = [0*60, 15*60]; % 0-15 minutes
+burstInterval = [15*60, 20*60]; % 15-20 minutes
+
+%~~~~~~~~~~Extract data for each unit in intervals ~~~~~~~~~~~~~~~~~~%
+
+% Preallocate a matrix to store the results for each unique unit
+resultsMatrix = zeros(length(uniqueUnits), 9); % Adjust the size if needed
+
+
+
+% Loop through the unique units and extract the corresponding data
+for i = 1:length(uniqueUnits)
+    % Find the rows corresponding to the current unit
+    unitRows = Unit == uniqueUnits(i);
+
+    % Extract the data for the current unit during basal activity
+    basalRows = unitRows & Timestamp >= basalInterval(1) & Timestamp <= basalInterval(2);
+    spikeNumber = sum(basalRows)
+    firingRate = spikeNumber/(15*60);
+    UnitChannelBasal = Channel(basalRows);
+    unitTimestampBasal = Timestamp(basalRows);
+    unitEnergyBasal = Energy(basalRows);
+    unitAreaBasal = Area(basalRows);
+    unitISIPreviousBasal = ISIprevious(basalRows);
+    unitISINextBasal = ISInext(basalRows);
+    unitPeakFWHMBasal = PeakFWHM(basalRows);
+    unitValleyFWHMBasal = ValleyFWHM(basalRows);
+    unitPeakValleyBasal = PeakValley(basalRows);
+
+    % Calculate basal average values for the current unit
+    avgunitEnergyBasal = mean(unitEnergyBasal);
+    avgunitAreaBasal = mean(unitAreaBasal);
+    avgunitISIPreviousBasal = mean(unitISIPreviousBasal);
+    avgunitISINextBasal = mean(unitISINextBasal);
+    avgunitISIBasal = (avgunitISIPreviousBasal + avgunitISINextBasal) / 2;
+    avgunitPeakFWHMBasal = mean(unitPeakFWHMBasal);
+    avgunitValleyFWHMBasal = mean(unitValleyFWHMBasal);
+    avgunitPeakValleyBasal = mean(unitPeakValleyBasal);
+
+ % Store the results in the matrix
+    resultsMatrix(i, :) = [uniqueUnits(i), avgunitEnergyBasal, avgunitAreaBasal, avgunitISIBasal, avgunitPeakFWHMBasal, avgunitValleyFWHMBasal, avgunitPeakValleyBasal, spikeNumber, firingRate];
+
+
+
+    % Print out the unit number and its corresponding average values during
+    % basal activity
+    fprintf('Unit %d:\n', uniqueUnits(i));
+    fprintf('Average Basal Energy: %f\n', avgunitEnergyBasal);
+    fprintf('Average Basal Area: %f\n', avgunitAreaBasal);
+    fprintf('Average Basal ISI: %f\n', avgunitISIBasal);
+    fprintf('Average Basal Peak FWHM: %f\n', avgunitPeakFWHMBasal);
+    fprintf('Average Basal Valley FWHM: %f\n', avgunitValleyFWHMBasal);
+    fprintf('Average Basal Peak Valley: %f\n', avgunitPeakValleyBasal);
+    fprintf('Number of Spikes: %f\n', spikeNumber);
+    fprintf('Firing Rate: %f\n Hz', firingRate);
+
+end
+% Display the results matrix
+disp('Results Matrix:');
+disp(resultsMatrix);
+
+% Specify the Excel file name
+excelFileName = 'results.xlsx';
+
+% Convert resultsMatrix to a table with variable names
+resultsTable = array2table(resultsMatrix, 'VariableNames', {'Unit', 'AvgEnergy', 'AvgArea', 'AvgISI', ...
+    'AvgPeakFWHM', 'AvgValleyFWHM', 'AvgPeakValley', 'SpikeNumber', 'FiringRate'});
+
+% Write the table to an Excel file
+writetable(resultsTable, excelFileName);
+
+disp(['Results have been written to ' excelFileName]);
+
+%~~~~~~~~~~Clonidine Validation~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% Raster plot LC Unit validation from clonidine injection
+figure;
+hold on;
+
+% Add a line for clonidine injection  on the X-axis
+line([28,28], [1,6], 'Color', 'red', 'LineWidth', 1.5);
+
+% Add a line for when neurons should shut off, anything after this is Clon
+% insensitive
+line([58,58], [1,6], 'Color', 'black', 'LineWidth', 1.5);
+
+% Loop through the unique units and plot the raster for each unit
+for i = 1:length(uniqueUnits)
+    unitRows = Unit == uniqueUnits(i);
+    unitTimestamp = Timestamp(unitRows)/60; %convert to minutes
+    unitPeakValley = PeakValley(unitRows);
+    
+ 
+    % Plot spikes for the current unit
+    scatter(unitTimestamp, ones(size(unitTimestamp))*i, 200, unitPeakValley, 'filled');
+end
+
+% Set the x-axis limits to extend the range (adjust these values as needed)
+xMin = 0; % Minimum x-axis value
+xMax = 66; % total length of recording 
+
+% Set the x-axis limits
+xlim([xMin, xMax]);
+
+% Set plot labels and title
+xlabel('Time(min)');
+ylabel('Unit');
+title('Unit Firing Across Time');
+
+% Add a colorbar to indicate peak values
+colorbar('eastoutside');
+
+% Calculate suitable color scale limits based on your data
+colorMin = min(PeakValley);
+colorMax = max(PeakValley);
+caxis([colorMin, colorMax]);
+
+% Adjust y-axis ticks to show unique unit numbers
+
+yticks(1:length(uniqueUnits));
+yticklabels(arrayfun(@num2str, uniqueUnits, 'UniformOutput', false));
+
+% Invert y-axis to have the first unit at the top
+set(gca, 'YDir', 'reverse');
+
+
+% Show the plot
+hold off;
+
+
+
+
