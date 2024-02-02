@@ -1,0 +1,17 @@
+% Create a time vector
+t = 0:0.01:2*pi;
+
+% Create waveforms
+waveform1 = sin(t);
+waveform2 = cos(t);
+
+% Plot the waveforms
+figure;
+plot(t, waveform1, 'r', t, waveform2, 'b');
+xlabel('Time');
+ylabel('Amplitude');
+legend('Waveform 1', 'Waveform 2');
+title('Waveform Plot');
+
+% Change the background color to black
+set(gcf, 'Color', 'k');
