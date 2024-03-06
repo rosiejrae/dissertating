@@ -1,0 +1,120 @@
+
+%BurstAnalysis after Grubbs Test...make sure to change the name for spon or evoked!
+
+unitTypeCell = string(sponGrubedIDedBursts.unitType);    % Convert the 'unitType' column to a cell array of strings
+unitType = unique(unitTypeCell);    % Get unique values from the 'unitType' column
+unitTypegroups = cell(length(unitType), 1); 
+% Loop through to separate unit type
+for i = 1:length(unitType)
+    rows = strcmp(unitTypeCell, unitType(i));    % Find the rows with the current string 
+    unitTypegroups{i} = sponGrubedIDedBursts(rows, :);   % Store the rows in the corresponding group
+end
+
+NA= unitTypegroups{1};
+NonClon= unitTypegroups{2};
+
+
+
+NonCLonNumericCols= NonClon(:, 5:9);
+grubbedNonClonNums = isoutlier(NonCLonNumericCols, 'grubbs');
+grubbedNonClonBursts = NonClon(~any(grubbedNonClonNums, 2), :);
+
+
+NAnumericCols= NA(:, 5:9);
+grubbedNANums = isoutlier(NAnumericCols, 'grubbs');
+grubbedNAbursts = NA(~any(grubbedNANums, 2), :);
+
+filteredSponBursts = [grubbedNonClonBursts;grubbedNAbursts ];
+
+
+%NA estrus groups
+NAestrusPhaseCell = string(grubbedNAbursts.estrusPhase);
+NAestrusPhase = unique(NAestrusPhaseCell);
+NAestrusPhaseGroups = cell(length(NAestrusPhase), 1); 
+% Loop through to separate estrusPhase
+for i = 1:length(NAestrusPhase)
+    rows = strcmp(NAestrusPhaseCell, NAestrusPhase(i));
+    NAestrusPhaseGroups{i} = grubbedNAbursts(rows, :);
+end
+
+
+
+
+%NonClon estrusGroups
+NCestrusPhaseCell = string(grubbedNonClonBursts.estrusPhase);
+NCestrusPhase = unique(NCestrusPhaseCell);
+NCestrusPhaseGroups = cell(length(NCestrusPhase), 1);
+NCestrusPhaseCell = string(grubbedNonClonBursts.estrusPhase);
+ 
+% Loop through to separate estrusPhase
+for i = 1:length(NCestrusPhase)
+    rows = strcmp(NCestrusPhaseCell, NCestrusPhase(i));
+    NCestrusPhaseGroups{i} = grubbedNonClonBursts(rows, :);
+end
+
+
+%NA figure
+plotRows = 3
+plotCol = 4
+
+subplot(plotRows, plotCol, 1)
+swarmchart(categorical(grubbedNAbursts.estrusPhase),grubbedNAbursts.FiringRate)
+ ylabel("NA Spontaneous Burst FiringRate")
+
+ subplot(plotRows, plotCol, 2)
+ swarmchart(categorical(grubbedNAbursts.estrusPhase),grubbedNAbursts.ISIinBurst)
+ ylabel("NA Spontaneous ISI in Burst")
+ 
+ subplot(plotRows, plotCol, 3)
+ swarmchart(categorical(grubbedNAbursts.estrusPhase),grubbedNAbursts.NumSpikes)
+ ylabel("NA Spontaneous #spike in Burst")
+
+  subplot(plotRows, plotCol, 4)
+ swarmchart(categorical(grubbedNAbursts.estrusPhase),grubbedNAbursts.InterburstInterval)
+ ylabel("NA Spontaneous interburstinterval")
+
+  subplot(plotRows, plotCol, 5)
+ swarmchart(categorical(grubbedNAbursts.estrusPhase),grubbedNAbursts.Duration)
+ ylabel("NA Spontaneous burstDuration")
+
+ subplot(plotRows, plotCol, 6)
+ swarmchart(categorical(grubbedNAbursts.estrusPhase),grubbedNAbursts.Burst)
+ ylabel("NA Spontaneous bursts")
+
+ 
+
+ 
+%NONCLON figure
+plotRows = 3
+plotCol = 4
+
+subplot(plotRows, plotCol, 1)
+swarmchart(categorical(grubbedNonClonBursts.estrusPhase),grubbedNonClonBursts.FiringRate, 'r')
+ ylabel("NonClon Spontaneous Burst FiringRate")
+
+ subplot(plotRows, plotCol, 2)
+ swarmchart(categorical(grubbedNonClonBursts.estrusPhase),grubbedNonClonBursts.ISIinBurst, 'r')
+ ylabel("NonClon Spontaneous ISI in Burst")
+ 
+ subplot(plotRows, plotCol, 3)
+ swarmchart(categorical(grubbedNonClonBursts.estrusPhase),grubbedNonClonBursts.NumSpikes, 'r')
+ ylabel("NonClon Spontaneous #spike in Burst")
+
+  subplot(plotRows, plotCol, 4)
+ swarmchart(categorical(grubbedNonClonBursts.estrusPhase),grubbedNonClonBursts.InterburstInterval, 'r')
+ ylabel("NonClon Spontaneous interburstinterval")
+
+  subplot(plotRows, plotCol, 5)
+ swarmchart(categorical(grubbedNonClonBursts.estrusPhase),grubbedNonClonBursts.Duration, 'r')
+ ylabel("NonClon Spontaneous burstDuration")
+
+ subplot(plotRows, plotCol, 6)
+ swarmchart(categorical(grubbedNonClonBursts.estrusPhase),grubbedNonClonBursts.Burst, 'r')
+ ylabel("NonClon Spontaneous bursts" )
+
+
+
+
+     
+NonCLonburstNum=height(grubbedNonClonBursts);
+NAburstNum = height(grubbedNAbursts);
