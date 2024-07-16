@@ -1,0 +1,55 @@
+import matplotlib.pyplot as plt
+
+# Update the color for the dark group markers to a slightly darker blue
+colors['Dark'] = '#87CEEB'  # Sky blue color
+
+# Create a new scatter plot with the specified aesthetic changes
+plt.figure(figsize=(12, 8))
+
+# Set the background color to black
+plt.gca().set_facecolor('black')
+plt.gcf().patch.set_facecolor('black')
+
+# Group by unitID to plot and connect points for each unit
+for unitID, group in filtered_data.groupby('unitID'):
+    # Extract firing rates for each epoch
+    blfr = group['BLFR'].values[0]
+    fsfr = group['FSFR'].values[0]
+    clonfr = group['ClonFR'].values[0]
+    light_cycle = group['lightCycle'].values[0]
+
+    # Plot points with circular markers
+    plt.scatter(new_epoch_positions['Spontaneous'], blfr, color=colors[light_cycle], alpha=0.7, marker='o')
+    plt.scatter(new_epoch_positions['Evoked'], fsfr, color=colors[light_cycle], alpha=0.7, marker='o')
+    plt.scatter(new_epoch_positions['Clonidine'], clonfr, color=colors[light_cycle], alpha=0.7, marker='o')
+
+    # Plot line connecting the points with increased line width
+    plt.plot([new_epoch_positions['Spontaneous'], new_epoch_positions['Evoked'], new_epoch_positions['Clonidine']], [blfr, fsfr, clonfr], color=colors[light_cycle], alpha=0.7, linewidth=2)
+
+# Set x-axis labels and positions with increased font size
+plt.xticks(ticks=list(new_epoch_positions.values()), labels=new_labels, color='white', fontsize=16)
+
+# Add y-axis label with increased font size
+plt.ylabel('Firing Rate (Hz)', color='white', fontsize=18)
+
+# Set the color and size of the tick marks and numbers
+plt.yticks(color='white', fontsize=16)
+
+# Set the color of the graph outline
+plt.gca().spines['bottom'].set_color('white')
+plt.gca().spines['left'].set_color('white')
+plt.gca().spines['top'].set_color('white')
+plt.gca().spines['right'].set_color('white')
+
+# Remove the title
+plt.title('')
+
+# Create a legend with the updated colors and white text
+handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[key], markersize=10) for key in colors.keys() if key != 'X']
+labels = [unique_colors[color] for color in unique_colors.keys() if color != 'red']
+legend = plt.legend(handles, labels, title='Light Cycle', title_fontsize='13', facecolor='black', edgecolor='white')
+plt.setp(legend.get_texts(), color='white')
+plt.setp(legend.get_title(), color='white')
+
+# Show the plot
+plt.show()
